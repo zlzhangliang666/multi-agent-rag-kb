@@ -1,0 +1,19 @@
+# Docker 构建上下文排除清单（减小 context 体积、避免把大文件打进镜像）
+.venv
+frontend/node_modules
+frontend/dist
+data
+models
+408-master
+logs
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+.idea
+HANDOFF.md
+STATUS.md
+evaluation/*.md
+*.log

@@ -1,0 +1,38 @@
+# =============================================================================
+# 可选：Docker Compose 一键起 前后端
+# 用法：docker compose up --build
+#   前端 http://localhost:5173
+#   后端 http://localhost:8000
+# 说明：非唯一启动方式，本地脚本 start.bat 仍是主推方式。
+#       需要预先准备 ./models/（模型）与 ./408-master/（语料），首次启动前建议先跑
+#       python scripts/rebuild_all.py --yes 生成 data/ 知识库。
+# =============================================================================
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kb-qa-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - KB_DATA_DIR=/app/data
+    volumes:
+      - ./models:/app/models:ro
+      - ./408-master:/app/408-master:ro
+      - kb_data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    image: kb-qa-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  kb_data:

@@ -1,0 +1,364 @@
+[
+  {
+    "id": "os-01",
+    "subject": "操作系统",
+    "query": "死锁产生的四个条件",
+    "keywords": [
+      "死锁"
+    ],
+    "answer_keywords": [
+      "互斥",
+      "不可剥夺",
+      "请求",
+      "循环等待"
+    ]
+  },
+  {
+    "id": "os-02",
+    "subject": "操作系统",
+    "query": "页面置换算法有哪些",
+    "keywords": [
+      "页面置换",
+      "置换算法",
+      "LRU",
+      "OPT"
+    ],
+    "answer_keywords": [
+      "最佳置换",
+      "先进先出",
+      "LRU",
+      "时钟"
+    ]
+  },
+  {
+    "id": "os-03",
+    "subject": "操作系统",
+    "query": "进程调度算法",
+    "keywords": [
+      "调度算法",
+      "进程调度",
+      "FCFS",
+      "时间片"
+    ],
+    "answer_keywords": [
+      "先来先服务",
+      "短作业优先",
+      "时间片轮转",
+      "优先级"
+    ]
+  },
+  {
+    "id": "os-04",
+    "subject": "操作系统",
+    "query": "虚拟内存的基本概念",
+    "keywords": [
+      "虚拟内存",
+      "虚拟存储器"
+    ],
+    "answer_keywords": [
+      "虚拟",
+      "内存",
+      "地址"
+    ]
+  },
+  {
+    "id": "os-05",
+    "subject": "操作系统",
+    "query": "磁盘调度算法",
+    "keywords": [
+      "磁盘调度",
+      "寻道"
+    ],
+    "answer_keywords": [
+      "寻道",
+      "调度",
+      "SCAN",
+      "SSTF"
+    ]
+  },
+  {
+    "id": "os-06",
+    "subject": "操作系统",
+    "query": "进程和线程的区别",
+    "keywords": [
+      "进程",
+      "线程"
+    ],
+    "answer_keywords": [
+      "进程",
+      "线程",
+      "资源",
+      "调度"
+    ]
+  },
+  {
+    "id": "ds-01",
+    "subject": "数据结构",
+    "query": "B+树和B树的区别",
+    "keywords": [
+      "B+树",
+      "B树",
+      "B-树"
+    ],
+    "answer_keywords": [
+      "B+树",
+      "叶子",
+      "关键字"
+    ]
+  },
+  {
+    "id": "ds-02",
+    "subject": "数据结构",
+    "query": "红黑树的定义和性质",
+    "keywords": [
+      "红黑树"
+    ],
+    "answer_keywords": [
+      "红黑树",
+      "结点",
+      "黑"
+    ]
+  },
+  {
+    "id": "ds-03",
+    "subject": "数据结构",
+    "query": "堆排序的时间复杂度",
+    "keywords": [
+      "堆排序",
+      "堆"
+    ],
+    "answer_keywords": [
+      "堆",
+      "log",
+      "时间复杂度"
+    ]
+  },
+  {
+    "id": "ds-04",
+    "subject": "数据结构",
+    "query": "KMP算法求next数组",
+    "keywords": [
+      "KMP",
+      "next数组"
+    ],
+    "answer_keywords": [
+      "KMP",
+      "next",
+      "前缀",
+      "后缀"
+    ]
+  },
+  {
+    "id": "ds-05",
+    "subject": "数据结构",
+    "query": "图的邻接矩阵存储",
+    "keywords": [
+      "邻接矩阵"
+    ],
+    "answer_keywords": [
+      "邻接矩阵",
+      "顶点",
+      "边"
+    ]
+  },
+  {
+    "id": "ds-06",
+    "subject": "数据结构",
+    "query": "二叉树的遍历方式",
+    "keywords": [
+      "遍历"
+    ],
+    "answer_keywords": [
+      "先序",
+      "中序",
+      "后序",
+      "层次"
+    ]
+  },
+  {
+    "id": "ds-07",
+    "subject": "数据结构",
+    "query": "哈希表处理冲突的方法",
+    "keywords": [
+      "哈希",
+      "散列",
+      "冲突"
+    ],
+    "answer_keywords": [
+      "开放地址",
+      "链地址",
+      "冲突"
+    ]
+  },
+  {
+    "id": "net-01",
+    "subject": "计算机网络",
+    "query": "TCP三次握手过程",
+    "keywords": [
+      "三次握手",
+      "TCP连接",
+      "握手"
+    ],
+    "answer_keywords": [
+      "SYN",
+      "ACK",
+      "握手"
+    ]
+  },
+  {
+    "id": "net-02",
+    "subject": "计算机网络",
+    "query": "HTTP和HTTPS的区别",
+    "keywords": [
+      "HTTPS",
+      "HTTP"
+    ],
+    "answer_keywords": [
+      "HTTPS",
+      "加密",
+      "SSL"
+    ]
+  },
+  {
+    "id": "net-03",
+    "subject": "计算机网络",
+    "query": "拥塞控制和流量控制的区别",
+    "keywords": [
+      "拥塞控制",
+      "流量控制"
+    ],
+    "answer_keywords": [
+      "拥塞控制",
+      "流量控制",
+      "窗口"
+    ]
+  },
+  {
+    "id": "net-04",
+    "subject": "计算机网络",
+    "query": "IP数据报分片",
+    "keywords": [
+      "分片",
+      "IP数据报",
+      "数据报"
+    ],
+    "answer_keywords": [
+      "分片",
+      "偏移",
+      "标识"
+    ]
+  },
+  {
+    "id": "net-05",
+    "subject": "计算机网络",
+    "query": "滑动窗口协议",
+    "keywords": [
+      "滑动窗口",
+      "GBN",
+      "SR协议"
+    ],
+    "answer_keywords": [
+      "滑动窗口",
+      "窗口",
+      "确认"
+    ]
+  },
+  {
+    "id": "net-06",
+    "subject": "计算机网络",
+    "query": "ARP协议的作用",
+    "keywords": [
+      "ARP"
+    ],
+    "answer_keywords": [
+      "ARP",
+      "IP",
+      "MAC",
+      "地址"
+    ]
+  },
+  {
+    "id": "co-01",
+    "subject": "计算机组成原理",
+    "query": "Cache的映射方式",
+    "keywords": [
+      "映射方式",
+      "Cache映射",
+      "直接映射",
+      "全相联"
+    ],
+    "answer_keywords": [
+      "直接映射",
+      "全相联",
+      "组相联"
+    ]
+  },
+  {
+    "id": "co-02",
+    "subject": "计算机组成原理",
+    "query": "指令流水线的基本概念",
+    "keywords": [
+      "流水线"
+    ],
+    "answer_keywords": [
+      "流水线",
+      "指令",
+      "重叠"
+    ]
+  },
+  {
+    "id": "co-03",
+    "subject": "计算机组成原理",
+    "query": "IEEE754浮点数表示",
+    "keywords": [
+      "IEEE754",
+      "IEEE 754",
+      "浮点数"
+    ],
+    "answer_keywords": [
+      "IEEE",
+      "符号",
+      "阶码",
+      "尾数"
+    ]
+  },
+  {
+    "id": "co-04",
+    "subject": "计算机组成原理",
+    "query": "中断的作用和原理",
+    "keywords": [
+      "中断"
+    ],
+    "answer_keywords": [
+      "中断",
+      "程序",
+      "响应"
+    ]
+  },
+  {
+    "id": "co-05",
+    "subject": "计算机组成原理",
+    "query": "总线仲裁方式",
+    "keywords": [
+      "总线"
+    ],
+    "answer_keywords": [
+      "总线",
+      "仲裁",
+      "请求"
+    ]
+  },
+  {
+    "id": "co-06",
+    "subject": "计算机组成原理",
+    "query": "定点数的补码表示",
+    "keywords": [
+      "补码"
+    ],
+    "answer_keywords": [
+      "补码",
+      "符号",
+      "取反"
+    ]
+  }
+]

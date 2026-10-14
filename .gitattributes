@@ -1,0 +1,52 @@
+# =============================================================================
+# 多 Agent 协同 RAG 知识库问答系统 - .gitattributes
+# 仓库内统一保存 LF，避免 Windows 检出时反复提示 "LF will be replaced by CRLF"
+# =============================================================================
+
+# 默认：Git 自动识别文本文件
+* text=auto
+
+# ---- 源码 / 配置：仓库与工作区统一 LF ----
+*.py    text eol=lf
+*.js    text eol=lf
+*.mjs   text eol=lf
+*.ts    text eol=lf
+*.vue   text eol=lf
+*.css   text eol=lf
+*.html  text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.toml  text eol=lf
+*.ini   text eol=lf
+*.cfg   text eol=lf
+*.svg   text eol=lf
+.gitignore     text eol=lf
+.gitattributes text eol=lf
+Dockerfile        text eol=lf
+Dockerfile.frontend text eol=lf
+
+# ---- Windows 脚本：必须保持 CRLF，否则 cmd / PowerShell 可能异常 ----
+# 注：start.bat 为 GBK 编码，不做编码转换，仅固定换行符
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# ---- 二进制：不做任何换行符转换 ----
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.pdf   binary
+*.docx  binary
+*.gguf  binary
+*.onnx  binary
+*.db    binary
+*.sqlite binary
+
+# ---- 语言统计：标记生成文件，避免污染 GitHub 语言占比 ----
+frontend/package-lock.json  linguist-generated=true

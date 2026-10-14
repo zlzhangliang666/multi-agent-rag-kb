@@ -1,0 +1,77 @@
+# =============================================================================
+# 多 Agent 协同 RAG 知识库问答系统 - .gitignore
+# =============================================================================
+
+# ---- 数据源（408 考研资料，约 1.1 GB，不入库；克隆后自行放置到 408-master/）----
+408-master/
+
+# ---- 模型文件 ----
+models/
+!models/.gitkeep
+
+# ---- Chroma 向量库（运行时数据统一在 data/ 下，已整体忽略）----
+
+# ---- 日志文件 ----
+logs/
+backend/logs/
+*.log
+
+# ---- 静态图片 ----
+static/images/
+backend/static/images/
+!backend/static/images/.gitkeep
+
+# ---- Python 临时文件 ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ---- 虚拟环境 ----
+.venv/
+venv/
+env/
+virtualenv/
+
+# ---- IDE ----
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ---- 操作系统文件 ----
+.DS_Store
+Thumbs.db
+
+# ---- SQLite 数据库文件 ----
+*.db
+*.sqlite
+data/
+!data/.gitkeep
+
+# ---- 上传文档 ----
+docs/
+!docs/.gitkeep
+
+# ---- 前端依赖 ----
+frontend/node_modules/
+frontend/dist/
+
+# ---- 测试 / 调试缓存 ----
+.pytest_cache/
+.screenshots/
+
+# ---- 备份文件 ----
+*.bak
+*.bak_*
+
+# ---- 敏感词文件（不提交默认空文件） ----
+data/sensitive_words.txt
+
+# ---- 临时文件 ----
+*.tmp
+*.temp

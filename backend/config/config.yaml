@@ -1,0 +1,121 @@
+# =============================================================================
+# 多 Agent 协同 RAG 知识库问答系统 - 全局配置文件
+# =============================================================================
+
+# ---- 模型配置 ----
+model:
+  # Qwen2.5-1.5B-Instruct GGUF Q4_K_M
+  path: "models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+  n_ctx: 2048
+  n_threads: 7              # CPU 核心数减一
+  n_gpu_layers: 0           # 纯 CPU 推理
+  mmap: true
+  max_tokens: 256
+  idle_timeout: 180          # 空闲超时秒数（3分钟自动卸载）
+
+# =============================================================================
+# 运行时数据目录说明
+# -----------------------------------------------------------------------------
+# 下列所有运行期产生的数据（向量库 / BM25 / SQLite / 上传文件 / 图片）统一用
+#   ${KB_DATA_DIR:-data}
+# 作为根目录：
+#   - 未设置 KB_DATA_DIR 时 = 项目内 `data/`（自包含，随项目一起迁移）；
+#   - 设置 KB_DATA_DIR 时 = 该绝对路径（受限沙箱可指向工作区外的可写目录），例如：
+#       PowerShell:  $env:KB_DATA_DIR="C:/Users/xxx/.trae-cn/work/xxx"
+#   - 一键全量重建：python scripts/rebuild_all.py
+# =============================================================================
+
+# ---- Embedding 配置 ----
+embedding:
+  # bge-small-zh-v1.5 ONNX
+  model_dir: "models/bge-small-zh-v1.5-onnx"
+  provider: "onnxruntime"
+  # embedding 缓存（按 chunk_id 对齐，用于快速重建 Chroma，省去重新编码）
+  cache_path: "${KB_DATA_DIR:-data}/embeddings_cache.npz"
+
+# ---- Chroma 向量库 ----
+chroma:
+  persist_directory: "${KB_DATA_DIR:-data}/chroma_db"
+  collection_name: "kb_collection"
+
+# ---- 检索配置 ----
+retrieval:
+  top_k: 4
+  bm25_weight: 0.5
+  vector_weight: 0.5
+  # BM25 索引持久化路径（upload/delete 会重写该索引）
+  bm25_index_path: "${KB_DATA_DIR:-data}/bm25_index.pkl"
+
+# ---- 数据库 ----
+database:
+  url: "sqlite:///${KB_DATA_DIR:-data}/kb_qa.db"
+  echo: false
+
+# ---- 文档上传 ----
+upload:
+  docs_dir: "${KB_DATA_DIR:-data}/uploads"
+  allowed_extensions:
+    - ".pdf"
+    - ".docx"
+    - ".txt"
+    - ".md"
+  max_file_size_mb: 50
+
+# ---- 静态资源 ----
+static:
+  images_dir: "${KB_DATA_DIR:-data}/static_images"
+
+# ---- 日志 ----
+logging:
+  level: "INFO"
+  file: "backend/logs/app.log"
+  max_bytes: 10485760           # 10MB
+  backup_count: 5
+
+# ---- Redis（可选，默认关闭） ----
+redis:
+  enabled: false
+  host: "127.0.0.1"
+  port: 6379
+  db: 0
+
+# ---- 云端绘图（可选） ----
+cloud_drawing:
+  enabled: false
+  api_url: ""
+  timeout: 30
+
+# ---- 内容审核 ----
+audit:
+  # DFA 敏感词文件路径
+  sensitive_words_file: "data/sensitive_words.txt"
+
+# ---- 数据源目录（语料根目录；当前内置 408 考研资料作为演示） ----
+datasource:
+  # 语料根目录（相对项目根目录）。换语料时改这一行即可，无需改代码。
+  path: "408-master"
+  # 支持的学科列表
+  subjects:
+    - name: "操作系统"
+      dir: "操作系统"
+      description: "王道操作系统笔记与PPT"
+    - name: "数据结构"
+      dir: "数据结构"
+      description: "王道数据结构笔记与PPT"
+    - name: "计算机组成原理"
+      dir: "计算机组成原理"
+      description: "王道计组笔记与PPT"
+    - name: "计算机网络"
+      dir: "计算机网络"
+      description: "王道&湖科大计网笔记与PPT"
+
+# ---- 知识库重建 ----
+# 换语料时：改上面的 datasource.path 指向新语料；按需调整下方 courseware 清单。
+# 说明：.md 笔记由 init_knowledge_base.py 全量扫描导入，无需在此登记；
+#       courseware 仅登记「需要用课件 PDF 额外补齐」的目录（path 相对 datasource.path，支持通配符）。
+rebuild:
+  courseware:
+    - subject: "数据结构"
+      path: "数据结构/ppt/*"
+    - subject: "计算机组成原理"
+      path: "计算机组成原理/ppt/第2章 数据的表示和运算"
