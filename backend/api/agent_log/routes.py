@@ -17,6 +17,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from backend.agent.citation import attribute_sources, SOURCE_TEXT_LIMIT
 from backend.agent.graph.graph import get_agent_graph
 from backend.database import SessionLocal, get_db
 from backend.database import crud
@@ -110,7 +111,11 @@ async def agent_chat(req: AgentChatRequest):
                 "section": c.get("section", ""),
                 "score": round(float(c.get("score", 0) or 0), 4),
                 "chunk_id": c.get("chunk_id", ""),
+                # 引用正文（截断）：前端可展示原文，评测可据此判定引用是否真正相关
+                "text": (c.get("text") or "").strip()[:SOURCE_TEXT_LIMIT],
             })
+        # 引用归因：只展示回答真正用到的来源（"检索到" != "被引用"）
+        sources = attribute_sources(answer, sources)
         if sources:
             yield f"data: {json.dumps({'status': 'sources', 'sources': sources}, ensure_ascii=False)}\n\n"
 

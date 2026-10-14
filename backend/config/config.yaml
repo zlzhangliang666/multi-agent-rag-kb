@@ -43,6 +43,11 @@ retrieval:
   top_k: 4
   bm25_weight: 0.5
   vector_weight: 0.5
+  # 相对分数阈值：RRF 融合分数低于 (top1 分数 × 该比例) 的来源会被丢弃，
+  # 避免明显跑题的片段也被当作「引用来源」展示（precision 上升、coverage 可能下降）
+  min_score_ratio: 0.45
+  # 至少保留的来源条数（防止阈值过滤后引用为空）
+  min_sources: 2
   # BM25 索引持久化路径（upload/delete 会重写该索引）
   bm25_index_path: "${KB_DATA_DIR:-data}/bm25_index.pkl"
 

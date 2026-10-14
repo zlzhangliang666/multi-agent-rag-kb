@@ -4,7 +4,8 @@
 
 在「检索评测」（evaluate_retrieval.py：Hit@4 / MRR）之外，补充**答案侧**质量指标：
 
-  1. 引用正确率 Citation Precision : Top-k 引用来源中真正相关（命中查询关键词）的比例
+  1. 引用正确率 Citation Precision : 引用来源中真正相关（命中查询关键词）的比例
+                                    （新口径含引用正文 text；旧口径仅 doc_name/section，一并输出对比）
   2. 引用覆盖率 Citation Coverage  : 至少有一条相关性引用的查询占比（引用不"跑题"的比例）
   3. 答案忠实度 Faithfulness       : 回答句子中被检索上下文"词面支撑"的比例（轻量启发式）
   4. 答案覆盖度 Answer Coverage    : 回答命中查询要点词（answer_keywords）的比例
@@ -17,8 +18,10 @@
 说明（诚实记录）：
   - 忠实度用「词面证据覆盖」作为 LLM 判定的**轻量代理**，不做严格语义蕴含（NLI）；
     数值应作为**相对参考**，不能等同于学术级 NLI 忠实度。
-  - 引用正确率按「引用来源的 doc_name/section 是否含查询关键词」判定，
+  - 引用正确率按「引用来源的 doc_name/section/引用正文 是否含查询关键词」判定，
     依赖关键词质量（评测集 keywords 字段）。
+  - 评测的引用来源是接口**归因过滤后**的结果（只保留回答真正用到的），
+    与「检索 top-k」不是同一批，故引用条数可能更少。
 
 用法：
     python scripts/evaluate_answer_quality.py            # 全量评测（约 6~10 分钟，需后端在跑）
@@ -116,20 +119,33 @@ def compute_faithfulness(answer: str, context: str) -> dict:
 
 
 def citation_metrics(sources: list, keywords: list) -> dict:
-    """引用正确率：引用来源的 doc_name/section 是否含查询关键词"""
+    """引用正确率：引用来源是否与查询相关（命中查询关键词）
+
+    判定口径（2026-10 修正）：
+      - 新口径 precision      : doc_name / section / **引用正文 text** 任一命中即算相关
+      - 旧口径 precision_name : 只看 doc_name / section（历史报告用的口径，保留用于对比）
+
+    原因：旧口径看不到引用内容，课件文件名多为「第X章 章节名」，
+    像「哈希表处理冲突」「补码」这类术语在文件名里天然不存在，会产生假阴性。
+    """
     if not sources:
-        return {"precision": 0.0, "relevant": 0, "total": 0, "covered": False}
+        return {"precision": 0.0, "precision_name": 0.0, "relevant": 0, "total": 0, "covered": False}
     kws = [k.lower() for k in keywords if k]
-    relevant = 0
+    relevant_full = 0
+    relevant_name = 0
     for s in sources:
-        blob = f"{s.get('doc_name', '')} {s.get('section', '')}".lower()
-        if any(k in blob for k in kws):
-            relevant += 1
+        name_blob = f"{s.get('doc_name', '')} {s.get('section', '')}".lower()
+        full_blob = f"{name_blob} {s.get('text', '')}".lower()
+        if any(k in name_blob for k in kws):
+            relevant_name += 1
+        if any(k in full_blob for k in kws):
+            relevant_full += 1
     return {
-        "precision": relevant / len(sources),
-        "relevant": relevant,
+        "precision": relevant_full / len(sources),
+        "precision_name": relevant_name / len(sources),
+        "relevant": relevant_full,
         "total": len(sources),
-        "covered": relevant > 0,
+        "covered": relevant_full > 0,
     }
 
 
@@ -244,6 +260,7 @@ def main():
             "id": q["id"], "subject": q["subject"], "query": q["query"],
             "answer_len": len(res["answer"]),
             "citation_precision": cite["precision"],
+            "citation_precision_name": cite["precision_name"],
             "citation_covered": cite["covered"],
             "faithfulness": faith["faithfulness"],
             "avg_coverage": faith["avg_coverage"],
@@ -255,7 +272,7 @@ def main():
 
         cov_s = f"{cov*100:.0f}%" if cov is not None else "n/a"
         print(f"[{i:2d}] {q['id']:7s} cPrec={cite['precision']*100:3.0f}% "
-              f"(覆盖={cite['relevant']}/{cite['total']}) "
+              f"(旧口径={cite['precision_name']*100:3.0f}% 覆盖={cite['relevant']}/{cite['total']}) "
               f"faith={faith['faithfulness']*100:3.0f}% ansCov={cov_s:>4s} "
               f"len={len(res['answer']):4d} {res['total']:.1f}s"
               + (f"  ERR={res['error']}" if res["error"] else ""))
@@ -266,6 +283,7 @@ def main():
         return sum(vals) / len(vals) if vals else 0.0
 
     cite_prec = avg("citation_precision")
+    cite_prec_name = avg("citation_precision_name")
     cite_cov = sum(1 for r in rows if r["citation_covered"]) / n * 100
     faith_avg = avg("faithfulness")
     cov_vals = [r["answer_coverage"] for r in rows if r["answer_coverage"] is not None]
@@ -275,7 +293,8 @@ def main():
     err_cnt = sum(1 for r in rows if r["error"])
 
     print("-" * 88)
-    print(f"引用正确率 Citation Precision : {cite_prec*100:.1f}%")
+    print(f"引用正确率 Citation Precision : {cite_prec*100:.1f}%  （新口径：doc_name/section/引用正文 任一命中）")
+    print(f"  旧口径（仅 doc_name/section）: {cite_prec_name*100:.1f}%  （修正前的定义，仅作对比）")
     print(f"引用覆盖率 Citation Coverage  : {cite_cov:.1f}%  （有相关引用的查询占比）")
     print(f"答案忠实度 Faithfulness       : {faith_avg*100:.1f}%  （词面证据覆盖启发式）")
     if ans_cov is not None:
@@ -292,7 +311,8 @@ def main():
     lines.append("## 汇总指标\n")
     lines.append("| 指标 | 数值 | 说明 |")
     lines.append("|---|---|---|")
-    lines.append(f"| 引用正确率 Citation Precision | **{cite_prec*100:.1f}%** | Top-k 引用中相关（命中查询关键词）的比例 |")
+    lines.append(f"| 引用正确率 Citation Precision | **{cite_prec*100:.1f}%** | 引用来源中相关（doc_name / section / 引用正文 任一命中查询关键词）的比例 |")
+    lines.append(f"| 　└ 修正前口径（仅 doc_name/section） | {cite_prec_name*100:.1f}% | 历史定义，看不到引用正文，仅作口径对比 |")
     lines.append(f"| 引用覆盖率 Citation Coverage | **{cite_cov:.1f}%** | 有相关引用的查询占比 |")
     lines.append(f"| 答案忠实度 Faithfulness | **{faith_avg*100:.1f}%** | 回答句被检索上下文词面支撑的比例（轻量代理） |")
     if ans_cov is not None:
@@ -302,6 +322,10 @@ def main():
     lines.append(f"| 失败查询 | {err_cnt}/{n} | HTTP/生成错误 |")
     lines.append("")
     lines.append("> 忠实度为**词面证据覆盖启发式**，非严格语义蕴含（NLI），仅作相对参考。\n")
+    lines.append("> 引用正确率**已修正判定口径**：旧口径只匹配 doc_name/section，看不到引用正文，")
+    lines.append("> 对「正文含关键词但课件文件名不含」的情况会误判为不相关；报告同时列出新旧两个数值以便对比，")
+    lines.append("> 属**口径修正**而非调高分数。此外接口已对引用做**归因过滤**（只保留回答真正用到的来源），")
+    lines.append("> 因此引用条数可能少于检索 top-k。\n")
     lines.append("## 逐条结果\n")
     lines.append("| # | id | 学科 | 查询 | 引正率 | 忠实度 | 答案覆盖 | 总耗时 |")
     lines.append("|---|---|---|---|---|---|---|---|")
