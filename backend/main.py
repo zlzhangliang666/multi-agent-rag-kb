@@ -54,14 +54,18 @@ def _init_agents():
         from backend.rag.vector_store import ChromaStore
         from backend.rag.bm25_index import BM25Index
         from backend.rag.retriever import HybridRetriever
+        from backend.rag.reranker import build_reranker
 
         embedder = ONNXEmbedding(model_dir=config.get("embedding", {}).get("model_dir"))
+        reranker = build_reranker(config.get("reranker", {}))
         persist_dir = config.get("chroma", {}).get("persist_directory", "data/chroma_db")
         bm25_path = config.get("retrieval", {}).get("bm25_index_path", "data/bm25_index.pkl")
 
         vs = ChromaStore(persist_dir=persist_dir)
         bm25 = BM25Index(persist_path=bm25_path)
-        retriever = HybridRetriever(vs, bm25, embedder)
+        retriever = HybridRetriever(
+            vs, bm25, embedder, reranker=reranker,
+            rerank_candidates=int(config.get("reranker", {}).get("max_candidates", 20) or 20))
         init_retrieval_agent(retriever)
         logger.info("RAG components initialized for Agent workflow")
 

@@ -164,7 +164,15 @@ def build_prompt(query: str, context: str, want_draw: bool = False, strict_draw:
     if context:
         parts.append(f"参考资料：\n{context}")
         parts.append(f"用户问题：{query}")
-        parts.append("请用中文回答，注明信息来源；参考资料不足时如实说明。")
+        parts.append(
+            "请严格依据参考资料用中文回答，要求：\n"
+            "1. 只使用参考资料中的事实、参数与代码用法，不要补充资料之外的知识；\n"
+            "2. 引用具体内容时注明来源（文档名/章节）；\n"
+            "3. 若参考资料只能部分回答，先给出资料支持的部分，再明确指出哪些内容「参考资料未提及」，不要整段拒答；\n"
+            "   只有当问题与资料完全无关时，才说明知识库无相关内容；\n"
+            "4. 回答简洁，避免与问题无关的扩展；但若问题是「如何使用/怎么用/如何实现/如何配置」类操作问题，\n"
+            "   应按参考资料中的关键环节完整作答（如安装、创建、连接/使用、清理等），不要只答其中一步。"
+        )
     else:
         parts.append(f"用户问题：{query}")
     return "\n\n".join(parts)

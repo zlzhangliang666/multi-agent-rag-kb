@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 """
-初始化知识库 - 扫描 408-master/ 下的**笔记**（.md）并导入
+初始化知识库 - 扫描当前数据源目录下的 **Markdown** 并导入
 
 只导入 .md 笔记；课件 PDF 由 import_ppt.py 按章节单独补齐（见 rebuild_all.py）。
 这样「笔记」与「课件」两类来源互不重叠，重建结果可稳定复现：
-    19 篇笔记（README + 考研经验分享 + 3 门学科章节笔记，计组第 2 章笔记为空文件被跳过）
+    当前演示语料：datasets/fastapi-zh（123 个 .md，1777 chunks）
 
 doc_id 由 backend/rag/doc_id.py 的 note_doc_id() 统一生成（唯一权威实现，与课件共用同一套
 规范化规则：路径分隔符与空白字符统一转下划线、去扩展名），保证幂等重建不产生重复。
-例如：操作系统/第1章 计算机系统概述.md -> kb_操作系统_第1章_计算机系统概述
+例如：tutorial/path-params.md -> kb_tutorial_path-params
 """
 import argparse
 import logging
@@ -44,7 +44,7 @@ def main():
     from backend.config import get_config
     _cfg = get_config()
     if args.data_dir is None:
-        args.data_dir = _cfg.get("datasource", {}).get("path") or os.path.join(os.path.dirname(__file__), "..", "408-master")
+        args.data_dir = _cfg.get("datasource", {}).get("path") or os.path.join(os.path.dirname(__file__), "..", "datasets", "fastapi-zh")
     if args.persist_dir is None:
         args.persist_dir = _cfg.get("chroma", {}).get("persist_directory")
     if args.bm25_path is None:

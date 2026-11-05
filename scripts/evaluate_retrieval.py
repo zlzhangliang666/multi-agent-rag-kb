@@ -77,6 +77,7 @@ def main():
     from backend.rag.vector_store import ChromaStore
     from backend.rag.bm25_index import BM25Index
     from backend.rag.retriever import HybridRetriever
+    from backend.rag.reranker import build_reranker
 
     # 路径优先级：命令行参数 > config.yaml
     cfg = get_config()
@@ -88,7 +89,10 @@ def main():
     embedder = ONNXEmbedding(model_dir=model_dir)
     vs = ChromaStore(persist_dir=persist_dir)
     bm25 = BM25Index(persist_path=bm25_path)
-    retriever = HybridRetriever(vs, bm25, embedder)
+    reranker = build_reranker(cfg.get("reranker", {}))
+    retriever = HybridRetriever(
+        vs, bm25, embedder, reranker=reranker,
+        rerank_candidates=int(cfg.get("reranker", {}).get("max_candidates", 20) or 20))
 
     # 知识库实际覆盖情况
     import pickle

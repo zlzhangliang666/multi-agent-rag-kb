@@ -5,7 +5,7 @@ from backend.rag.doc_id import note_doc_id, ppt_doc_id
 
 
 def test_note_doc_id_strips_ext_and_normalizes():
-    root = os.path.join("E:", os.sep, "thesis", "408-master")
+    root = os.path.join("E:", os.sep, "thesis", "datasets", "fastapi-zh")
     path = os.path.join(root, "操作系统", "第1章 计算机系统概述.md")
     assert note_doc_id(root, path) == "kb_操作系统_第1章_计算机系统概述"
 

@@ -14,7 +14,7 @@
   4. （可选）检索评测   打印 Hit@4 / MRR
 
 数据来源（必须存在于项目内）：
-  数据源目录   由 config.yaml 的 datasource.path 指定（默认内置 408 考研资料作为演示语料）
+  数据源目录   由 config.yaml 的 datasource.path 指定（默认使用 FastAPI 中文官方文档 datasets/fastapi-zh）
   models/       Qwen GGUF + bge-small-zh-v1.5 ONNX
 
 用法：
@@ -121,7 +121,7 @@ def main():
         _backup(p)
 
     # ---- 2. 扫描笔记，构建 Chroma + BM25 ----
-    print("\n[2/5] 导入笔记（408-master 下的 .md）...")
+    print("\n[2/5] 导入 Markdown（当前数据源下的 .md）...")
     _run("init_knowledge_base.py",
          ["--data-dir", src_dir, "--persist-dir", chroma_dir, "--bm25-path", bm25_path])
 

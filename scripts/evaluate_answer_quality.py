@@ -7,7 +7,8 @@
   1. 引用正确率 Citation Precision : 引用来源中真正相关（命中查询关键词）的比例
                                     （新口径含引用正文 text；旧口径仅 doc_name/section，一并输出对比）
   2. 引用覆盖率 Citation Coverage  : 至少有一条相关性引用的查询占比（引用不"跑题"的比例）
-  3. 答案忠实度 Faithfulness       : 回答句子中被检索上下文"词面支撑"的比例（轻量启发式）
+  3. 答案忠实度 Faithfulness       : 两个口径 —— LLM-as-judge（主指标，逐句判定是否被参考资料支持）
+                                    与词面证据覆盖（轻量回归指标）
   4. 答案覆盖度 Answer Coverage    : 回答命中查询要点词（answer_keywords）的比例
   5. 耗时                        : 首帧延迟 / 总耗时
 
@@ -26,6 +27,7 @@
 用法：
     python scripts/evaluate_answer_quality.py            # 全量评测（约 6~10 分钟，需后端在跑）
     python scripts/evaluate_answer_quality.py --limit 5  # 先跑 5 条做冒烟验证
+    python scripts/evaluate_answer_quality.py --no-judge # 跳过 LLM judge（更快，仅词面指标）
 """
 import argparse
 import json
@@ -149,6 +151,109 @@ def citation_metrics(sources: list, keywords: list) -> dict:
     }
 
 
+_JUDGE_PROMPT = (
+    "你是严格的 RAG 忠实度评审，只依据【参考资料】判断【回答】。\n"
+    "请把回答拆成事实性句子，判断每句是否能被参考资料直接支持（语义等价即可，不要求逐字相同）。\n"
+    "判定从严：句子中的关键事实（参数、函数名、行为）必须出现在资料中或可由资料直接推出；仅主题相关不算支持。\n"
+    "只输出一行 JSON，不要代码块、不要解释，格式：\n"
+    '{{"total": 句子总数, "supported": 被支持的句子数, "unsupported": ["最多3条不被支持的句子"]}}\n\n'
+    "【参考资料】\n{context}\n\n【回答】\n{answer}\n\n【JSON】"
+)
+
+
+def _stream_raw(base_url: str, prompt: str, timeout: float = 180.0) -> str:
+    """直接调用 /api/chat/stream（纯模型流式，不走检索、不写聊天历史）"""
+    import httpx
+    parts = []
+    with httpx.Client(timeout=timeout) as client:
+        with client.stream("POST", f"{base_url}/api/chat/stream",
+                           json={"prompt": prompt}) as resp:
+            if resp.status_code != 200:
+                return ""
+            for line in resp.iter_lines():
+                if not line or not line.startswith("data: "):
+                    continue
+                try:
+                    data = json.loads(line[6:])
+                except json.JSONDecodeError:
+                    continue
+                if data.get("status") == "error":
+                    return ""
+                token = data.get("token", "")
+                if token:
+                    parts.append(token)
+    return "".join(parts)
+
+
+def _parse_judge(text: str):
+    """从 judge 输出中抽取 JSON；格式不合法返回 None"""
+    m = re.search(r"\{[\s\S]*\}", text or "")
+    if not m:
+        return None
+    total = supported = None
+    d = {}
+    try:
+        d = json.loads(m.group(0))
+        total = int(d.get("total") or 0)
+        supported = int(d.get("supported") or 0)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        # 宽松兜底：模型偶尔输出非严格 JSON（中文引号 / 尾逗号），直接抓数字
+        mt = re.search(r'"?total"?\s*[:：]\s*(\d+)', text)
+        ms = re.search(r'"?supported"?\s*[:：]\s*(\d+)', text)
+        if mt and ms:
+            total, supported = int(mt.group(1)), int(ms.group(1))
+    if total is None or supported is None:
+        return None
+    if total <= 0 or supported < 0 or supported > total:
+        return None
+    unsupported = d.get("unsupported") or []
+    if not isinstance(unsupported, list):
+        unsupported = []
+    return {
+        "faithfulness": supported / total,
+        "total": total,
+        "supported": supported,
+        "unsupported": [str(x)[:80] for x in unsupported][:3],
+    }
+
+
+def judge_faithfulness(base_url: str, answer: str, context: str):
+    """LLM-as-judge 忠实度：逐句判断回答是否被参考资料支持"""
+    if not answer.strip():
+        return None
+    prompt = _JUDGE_PROMPT.format(context=context[:3000], answer=answer[:2500])
+    return _parse_judge(_stream_raw(base_url, prompt))
+
+
+def judge_faithfulness_external(answer: str, context: str, base_url: str,
+                                api_key: str, model: str):
+    """用外部 OpenAI 兼容模型做 judge（只读回答与上下文，不改生成链路）"""
+    if not answer.strip():
+        return None
+    import httpx
+    prompt = _JUDGE_PROMPT.format(context=context[:3000], answer=answer[:2500])
+    url = base_url.rstrip("/") + "/chat/completions"
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.0,
+        "max_tokens": 512,
+        "stream": False,
+    }
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    try:
+        with httpx.Client(timeout=120.0) as client:
+            resp = client.post(url, headers=headers, json=payload)
+        if resp.status_code != 200:
+            print(f"  [ext-judge] HTTP {resp.status_code}: {resp.text[:150]}")
+            return None
+        text = resp.json()["choices"][0]["message"]["content"]
+    except Exception as e:
+        print(f"  [ext-judge] 调用失败: {e}")
+        return None
+    return _parse_judge(text)
+
+
 def answer_coverage(answer: str, answer_keywords: list) -> float:
     """答案覆盖度：命中 answer_keywords 的比例（无要点词则返回 None 表示不适用）"""
     if not answer_keywords:
@@ -204,7 +309,11 @@ def main():
     ap.add_argument("--base-url", default="http://127.0.0.1:8000")
     ap.add_argument("--out", default=None, help="报告输出路径（默认 evaluation/answer_quality_report.md）")
     ap.add_argument("--limit", type=int, default=0, help="仅评测前 N 条（0=全量）")
-    ap.add_argument("--top-k", type=int, default=4)
+    ap.add_argument("--top-k", type=int, default=0, help="本地复算上下文条数（0=读取 config 的 retrieval.top_k）")
+    ap.add_argument("--no-judge", action="store_true", help="跳过 LLM-as-judge 忠实度（仅词面指标）")
+    ap.add_argument("--judge-model", default="", help="外部 judge 模型名（OpenAI 兼容）；为空则只用本地 judge")
+    ap.add_argument("--judge-base-url", default="", help="外部 judge base_url（默认读运行时 LLM 设置）")
+    ap.add_argument("--judge-api-key", default="", help="外部 judge API Key（默认读运行时设置 / JUDGE_API_KEY）")
     ap.add_argument("--persist-dir", default=None)
     ap.add_argument("--bm25-path", default=None)
     ap.add_argument("--model-dir", default=None)
@@ -232,14 +341,38 @@ def main():
     from backend.rag.vector_store import ChromaStore
     from backend.rag.bm25_index import BM25Index
     from backend.rag.retriever import HybridRetriever
+    from backend.rag.reranker import build_reranker
 
     cfg = get_config()
+    if not args.top_k:
+        args.top_k = int(cfg.get("retrieval", {}).get("top_k", 4) or 4)
     model_dir = args.model_dir or cfg.get("embedding", {}).get("model_dir")
     persist_dir = args.persist_dir or cfg.get("chroma", {}).get("persist_directory")
     bm25_path = args.bm25_path or cfg.get("retrieval", {}).get("bm25_index_path")
     embedder = ONNXEmbedding(model_dir=model_dir)
-    retriever = HybridRetriever(ChromaStore(persist_dir=persist_dir),
-                                BM25Index(persist_path=bm25_path), embedder)
+    reranker = build_reranker(cfg.get("reranker", {}))
+    retriever = HybridRetriever(
+        ChromaStore(persist_dir=persist_dir), BM25Index(persist_path=bm25_path), embedder,
+        reranker=reranker,
+        rerank_candidates=int(cfg.get("reranker", {}).get("max_candidates", 20) or 20))
+
+    ext_model = (args.judge_model or "").strip()
+    ext_base = (args.judge_base_url or os.getenv("JUDGE_BASE_URL", "")).strip()
+    ext_key = (args.judge_api_key or os.getenv("JUDGE_API_KEY", "")
+               or os.getenv("OPENAI_API_KEY", "")).strip()
+    if ext_model:
+        try:
+            from backend.llm_core.providers.settings_store import load_settings
+            _st = load_settings()
+            ext_base = ext_base or (_st.get("base_url") or "")
+            ext_key = ext_key or (_st.get("api_key") or "")
+        except Exception as e:
+            print(f"[judge] 读取运行时 LLM 设置失败：{e}")
+        if not ext_key:
+            print("[judge] 未配置外部 API Key，跳过外部判定（可传 --judge-api-key）")
+            ext_model = ""
+        else:
+            print(f"[judge] 外部 judge = {ext_model} @ {ext_base}")
 
     conv_id = "eval-quality-" + time.strftime("%Y%m%d%H%M%S")
     rows = []
@@ -253,6 +386,9 @@ def main():
         res = stream_chat(args.base_url, q["query"], conv_id)
 
         faith = compute_faithfulness(res["answer"], context)
+        judge = None if args.no_judge else judge_faithfulness(args.base_url, res["answer"], context)
+        judge_ext = (judge_faithfulness_external(res["answer"], context, ext_base, ext_key, ext_model)
+                     if ext_model else None)
         cite = citation_metrics(res["sources"], q["keywords"])
         cov = answer_coverage(res["answer"], q["answer_keywords"])
 
@@ -263,6 +399,8 @@ def main():
             "citation_precision_name": cite["precision_name"],
             "citation_covered": cite["covered"],
             "faithfulness": faith["faithfulness"],
+            "judge_faithfulness": judge["faithfulness"] if judge else None,
+            "judge_external": judge_ext["faithfulness"] if judge_ext else None,
             "avg_coverage": faith["avg_coverage"],
             "answer_coverage": cov,
             "ttft": res["ttft"], "total": res["total"],
@@ -271,9 +409,12 @@ def main():
         })
 
         cov_s = f"{cov*100:.0f}%" if cov is not None else "n/a"
+        judge_s = f"{judge['faithfulness']*100:.0f}%" if judge else " n/a"
+        ext_s = f"{judge_ext['faithfulness']*100:.0f}%" if judge_ext else " n/a"
+        ext_part = f" ext={ext_s:>4s}" if ext_model else ""
         print(f"[{i:2d}] {q['id']:7s} cPrec={cite['precision']*100:3.0f}% "
               f"(旧口径={cite['precision_name']*100:3.0f}% 覆盖={cite['relevant']}/{cite['total']}) "
-              f"faith={faith['faithfulness']*100:3.0f}% ansCov={cov_s:>4s} "
+              f"faith={faith['faithfulness']*100:3.0f}% judge={judge_s:>4s}{ext_part} ansCov={cov_s:>4s} "
               f"len={len(res['answer']):4d} {res['total']:.1f}s"
               + (f"  ERR={res['error']}" if res["error"] else ""))
 
@@ -288,6 +429,10 @@ def main():
     faith_avg = avg("faithfulness")
     cov_vals = [r["answer_coverage"] for r in rows if r["answer_coverage"] is not None]
     ans_cov = sum(cov_vals) / len(cov_vals) * 100 if cov_vals else None
+    judge_vals = [r["judge_faithfulness"] for r in rows if r["judge_faithfulness"] is not None]
+    judge_avg = sum(judge_vals) / len(judge_vals) if judge_vals else 0.0
+    ext_vals = [r["judge_external"] for r in rows if r["judge_external"] is not None]
+    ext_avg = sum(ext_vals) / len(ext_vals) if ext_vals else 0.0
     ttft_avg = avg("ttft")
     total_avg = avg("total")
     err_cnt = sum(1 for r in rows if r["error"])
@@ -297,6 +442,10 @@ def main():
     print(f"  旧口径（仅 doc_name/section）: {cite_prec_name*100:.1f}%  （修正前的定义，仅作对比）")
     print(f"引用覆盖率 Citation Coverage  : {cite_cov:.1f}%  （有相关引用的查询占比）")
     print(f"答案忠实度 Faithfulness       : {faith_avg*100:.1f}%  （词面证据覆盖启发式）")
+    if not args.no_judge:
+        print(f"LLM 判定忠实度 Judge         : {judge_avg*100:.1f}%  （本地 judge，成功 {len(judge_vals)}/{n}）")
+    if ext_model:
+        print(f"外部 LLM judge（{ext_model}）: {ext_avg*100:.1f}%  （成功 {len(ext_vals)}/{n}）")
     if ans_cov is not None:
         print(f"答案覆盖度 Answer Coverage     : {ans_cov:.1f}%")
     print(f"首帧延迟 TTFT / 总耗时         : {ttft_avg:.1f}s / {total_avg:.1f}s")
@@ -307,33 +456,54 @@ def main():
     lines = []
     lines.append("# 答案质量评测报告（Answer Quality Report）\n")
     lines.append(f"> 生成时间：{time.strftime('%Y-%m-%d %H:%M:%S')}")
-    lines.append(f"> 后端：{args.base_url}　查询数：{n}　TopK：{args.top_k}\n")
+    lines.append(f"> 后端：{args.base_url}　查询数：{n}　TopK：{args.top_k}")
+    if ext_model:
+        lines.append(f"> 外部 judge：{ext_model}　（生成链路不变，仅判定模型不同）")
+    lines.append("")
     lines.append("## 汇总指标\n")
     lines.append("| 指标 | 数值 | 说明 |")
     lines.append("|---|---|---|")
     lines.append(f"| 引用正确率 Citation Precision | **{cite_prec*100:.1f}%** | 引用来源中相关（doc_name / section / 引用正文 任一命中查询关键词）的比例 |")
     lines.append(f"| 　└ 修正前口径（仅 doc_name/section） | {cite_prec_name*100:.1f}% | 历史定义，看不到引用正文，仅作口径对比 |")
     lines.append(f"| 引用覆盖率 Citation Coverage | **{cite_cov:.1f}%** | 有相关引用的查询占比 |")
-    lines.append(f"| 答案忠实度 Faithfulness | **{faith_avg*100:.1f}%** | 回答句被检索上下文词面支撑的比例（轻量代理） |")
+    lines.append(f"| 答案忠实度 Faithfulness（词面） | **{faith_avg*100:.1f}%** | 回答句被检索上下文词面支撑的比例（轻量回归指标） |")
+    if not args.no_judge:
+        lines.append(f"| LLM 判定忠实度（本地 judge） | **{judge_avg*100:.1f}%** | 本地 Qwen2.5-1.5B 逐句判断（成功 {len(judge_vals)}/{n}；与生成同模型，有自我偏好） |")
+    if ext_model:
+        lines.append(f"| **LLM 判定忠实度（外部 {ext_model}）** | **{ext_avg*100:.1f}%** | 外部模型交叉判定（成功 {len(ext_vals)}/{n}） |")
     if ans_cov is not None:
         lines.append(f"| 答案覆盖度 Answer Coverage | **{ans_cov:.1f}%** | 回答命中 answer_keywords 的比例 |")
     lines.append(f"| 平均首帧延迟 TTFT | {ttft_avg:.2f} s | SSE 首帧到达时间 |")
     lines.append(f"| 平均总耗时 | {total_avg:.2f} s | 端到端（1.5B CPU 推理） |")
     lines.append(f"| 失败查询 | {err_cnt}/{n} | HTTP/生成错误 |")
     lines.append("")
-    lines.append("> 忠实度为**词面证据覆盖启发式**，非严格语义蕴含（NLI），仅作相对参考。\n")
+    lines.append("> 忠实度给出两个口径：**LLM 判定（主指标）** 与词面覆盖（低成本回归）。")
+    if ext_model:
+        lines.append(f"> 外部 judge 为 **{ext_model}**，与生成模型不同源，可避免同模型自我偏好；两列数字只在本报告内对比。")
+    else:
+        lines.append("> LLM judge 由当前生效模型执行（默认本地 Qwen2.5-1.5B），评判能力有限，仅用于相对比较。")
+    lines.append("> 词面法非严格语义蕴含（NLI），会低估语义正确但改写过的句子。\n")
     lines.append("> 引用正确率**已修正判定口径**：旧口径只匹配 doc_name/section，看不到引用正文，")
     lines.append("> 对「正文含关键词但课件文件名不含」的情况会误判为不相关；报告同时列出新旧两个数值以便对比，")
     lines.append("> 属**口径修正**而非调高分数。此外接口已对引用做**归因过滤**（只保留回答真正用到的来源），")
     lines.append("> 因此引用条数可能少于检索 top-k。\n")
     lines.append("## 逐条结果\n")
-    lines.append("| # | id | 学科 | 查询 | 引正率 | 忠实度 | 答案覆盖 | 总耗时 |")
-    lines.append("|---|---|---|---|---|---|---|---|")
+    ext_head = " LLM(外) |" if ext_model else ""
+    lines.append(f"| # | id | 学科 | 查询 | 引正率 | 词面忠实 | LLM忠实 |{ext_head} 答案覆盖 | 总耗时 |")
+    if ext_model:
+        lines.append("|---|---|---|---|---|---|---|---|---|---|")
+    else:
+        lines.append("|---|---|---|---|---|---|---|---|---|")
     for i, r in enumerate(rows, 1):
         cov_s = f"{r['answer_coverage']*100:.0f}%" if r["answer_coverage"] is not None else "-"
+        judge_cell = f"{r['judge_faithfulness']*100:.0f}%" if r["judge_faithfulness"] is not None else "-"
+        ext_cell = ""
+        if ext_model:
+            ev = r["judge_external"]
+            ext_cell = f" {ev*100:.0f}% |" if ev is not None else " - |"
         lines.append(f"| {i} | {r['id']} | {r['subject']} | {r['query']} | "
                      f"{r['citation_precision']*100:.0f}% | {r['faithfulness']*100:.0f}% | "
-                     f"{cov_s} | {r['total']:.1f}s |")
+                     f"{judge_cell} |{ext_cell} {cov_s} | {r['total']:.1f}s |")
     lines.append("")
     # 低分项关注
     low = [r for r in rows if r["faithfulness"] < SUPPORT_THRESHOLD]

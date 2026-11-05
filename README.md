@@ -1,7 +1,7 @@
 # 多 Agent 协同 RAG 知识库问答系统
 
 通用私有知识库问答系统（离线运行、多 Agent 协同、检索溯源、流式问答、内容审核、Agent 链路可视化）。
-内置 **408 考研资料** 作为演示语料，换成其他语料只需改配置（见文末「换用其他语料」）。
+内置 **FastAPI 中文官方文档** 作为演示语料（408 考研资料保留为备用语料），换成其他语料只需改配置（见文末「换用其他语料」）。
 
 ## 当前状态
 
@@ -10,17 +10,17 @@
 
 | 能力 | 状态 |
 |---|---|
-| 知识库规模 | 140 文档 / 4183 chunks（408 演示语料） |
+| 知识库规模 | 123 文档 / 1777 chunks（FastAPI 中文文档演示语料） |
 | 模型独立子进程 + 空闲 180s 自动卸载 | 已验证（1787MB → 67.3MB，实测 idle=180.4s 触发卸载） |
-| RAG 检索（BM25 + 向量 + RRF） | 已验证 Hit@4 = 100.0%（25/25），MRR = 0.9300 |
-| 答案质量评测（引用正确率 90.3% / 忠实度 74.0%） | 已实施 25 条，见 `evaluation/answer_quality_report.md` |
+| RAG 检索（BM25 + 向量 + RRF + Cross-Encoder 精排） | 已验证 Hit@4 = 97.2%（35/36），MRR = 0.9537 |
+| 答案质量评测（36 条：引用正确率 89.3% / 外部 judge 58.7% / 本地 judge 81.0% / 答案覆盖 87.0%） | 已实施，见 `evaluation/answer_quality_report.md` |
 | LangGraph 多 Agent 链路 | 已验证 7 节点，含审核拦截与绘图分支 |
 | 前端可配置远程模型（OpenAI 兼容，Key 脱敏存储） | 已验证：不配置则默认本地；切换远程自动卸载本地权重 |
 | SQLite 落库（9 张表） | 已验证 |
 | Vue3 前端 7 个页面（含数据大屏 / 模型设置） | 构建通过，dev server 联调通过（浏览器像素级未验证） |
 | 绘图（Mermaid） | 模型自绘 + 退化图自检重试 + 关键词模板兜底；支持全屏查看、历史会话图片回显 |
 | 单元测试（pytest） | 71 项通过，见 `test/` |
-| 性能测试（检索 avg 138.5ms / 生成吞吐 ~28 字/s） | 已实施，见 `evaluation/performance_report.md` |
+| 性能测试（检索 avg 1732.6ms·含精排 / 生成吞吐 30.4~74.2 字/s） | 已实施，见 `evaluation/performance_report.md` |
 
 ## 环境要求
 
@@ -31,15 +31,17 @@
 
 ## 前置资源（不入库，需自行补齐）
 
-为控制仓库体积、并规避版权与密钥风险，以下两个目录已在 `.gitignore` 中排除，**克隆后需自行补齐**：
+为控制仓库体积、并规避版权与密钥风险，`models/` 与 `408-master/` 已在 `.gitignore` 中排除；
+演示语料 `datasets/fastapi-zh/` 已随仓库提供，克隆后可直接使用：
 
 | 目录 | 内容 | 补齐方式 |
 |---|---|---|
 | `models/` | Qwen2.5-1.5B GGUF + bge-small-zh ONNX（约 1.1 GB） | 见下方「模型下载」 |
-| `408-master/` | 演示语料：408 考研资料（约 1.1 GB） | 自行获取，或替换为自有语料（见文末「换用其他语料」） |
+| `datasets/fastapi-zh/` | 演示语料：FastAPI 中文官方文档（MIT，123 个 .md，约 700 KB） | 已随仓库提供（来源 https://github.com/fastapi/fastapi） |
+| `408-master/` | 备用语料：408 考研资料（约 1.1 GB，不入库） | 可选，需自行获取 |
 
 > 缺 `models/` 时无法本地推理，但仍可在「模型设置」页配置 OpenAI 兼容远程模型；
-> 缺 `408-master/` 时后端可正常启动，只是知识库为空。
+> 缺数据源目录（默认 `datasets/fastapi-zh/`）时后端可正常启动，只是知识库为空。
 > 运行期数据（Chroma / BM25 / SQLite）在 `data/` 下，同样不入库，用 `scripts\rebuild_all.py --yes` 重建。
 
 ## 快速启动
@@ -77,18 +79,18 @@ npm run dev
 ### 3. 重建知识库（可选）
 
 ```powershell
-# 【推荐】一键全量重建：从 408-master 重生成 Chroma + BM25 + SQLite（约 3~5 分钟）
+# 【推荐】一键全量重建：从当前数据源（datasets/fastapi-zh）重生成 Chroma + BM25 + SQLite（约 1~2 分钟）
 # 换机器 / 清理临时目录 / data/ 缺失时用这一条即可。加 --yes 才真正执行。
 python scripts\rebuild_all.py            # 预览将要重建的内容
 python scripts\rebuild_all.py --yes      # 执行（旧派生数据会改名为 .bak_<时间戳>）
 
 # 以下为单步脚本（按需使用）
-python scripts\init_knowledge_base.py     # 仅从 408-master 全量导入笔记（解析 → 分块 → 向量化 → 建索引）
+python scripts\init_knowledge_base.py     # 仅从当前数据源全量导入 Markdown（解析 → 分块 → 向量化 → 建索引）
 python scripts\import_ppt.py --dir <课件目录> --subject <学科> --chapter <章节>   # 从课件 PDF 补齐某章节
 python scripts\rebuild_vector_store.py    # 仅重建 Chroma（复用 BM25 与 embedding 缓存，约 3 秒）
 python scripts\rebuild_bm25_from_chroma.py# 以 Chroma 为权威源重建 BM25（修复索引不一致，幂等）
 python scripts\sync_kb_to_db.py           # 把知识库同步到 SQLite 的 documents / chunks 表
-python scripts\evaluate_retrieval.py      # 检索质量评测（25 条查询，输出 Hit@4 / MRR / 分学科命中率）
+python scripts\evaluate_retrieval.py      # 检索质量评测（36 条查询，输出 Hit@4 / MRR / 分学科命中率）
 ```
 
 > 重建后**必须重启后端**，否则内存里仍是旧索引。
@@ -97,14 +99,14 @@ python scripts\evaluate_retrieval.py      # 检索质量评测（25 条查询，
 
 全部评测脚本、评测集与报告位于 `evaluation/`，单元测试位于 `test/`。
 
-### 检索质量评测（25 条通用查询）
+### 检索质量评测（36 条通用查询）
 
 ```powershell
 python scripts\evaluate_retrieval.py
 ```
 
 输出 Hit@4 / MRR / 分学科命中率。评测集 `evaluation/queries.json` 结构为
-`id / subject / query / keywords / answer_keywords`，换成自己的语料后按同一结构重写即可复用全部脚本。
+`id / subject / query / keywords / expected_doc / answer_keywords`，换成自己的语料后按同一结构重写即可复用全部脚本。
 
 ### 答案质量评测（端到端）
 
@@ -112,7 +114,7 @@ python scripts\evaluate_retrieval.py
 并在本地复算检索上下文用于忠实度判定。
 
 ```powershell
-python scripts\evaluate_answer_quality.py              # 全量（25 条）
+python scripts\evaluate_answer_quality.py              # 全量（当前评测集 36 条）
 python scripts\evaluate_answer_quality.py --limit 2    # 冒烟
 ```
 
@@ -121,7 +123,19 @@ python scripts\evaluate_answer_quality.py --limit 2    # 冒烟
   **答案覆盖度**（命中 answer_keywords）。
 - 引用侧有两处工程改动：① 接口对引用做**归因过滤**，只展示回答真正用到的来源；
   ② 检索按**相对分数阈值**截断明显低分的片段。评测报告同时给出**口径修正前/后**两个引用正确率。
-- 报告：`evaluation/answer_quality_report.md`
+- 忠实度有两个口径：**LLM-as-judge（主指标）**通过 `/api/chat/stream` 逐句判定（`--no-judge` 可跳过），
+  词面证据覆盖保留为低成本回归指标。
+- 最新实测（36 条，0 失败，TopK 5 / min_score_ratio 0.5 / 精排开启 / 完整作答提示词）：
+  引用正确率 **89.3%**（旧口径 59.6%）、引用覆盖率 **97.2%**、词面忠实 **78.8%**、
+  本地 judge **81.0%**、外部 DeepSeek judge **58.7%**、答案覆盖度 **87.0%**、平均总耗时 23.9s。
+- 精排消融（同一检索、旧提示词）：引用正确率 81.2% → **86.7%**，答案覆盖 76.4% → **83.8%**，
+  外部 judge 66.8% → **72.3%**，MRR 0.8843 → **0.9537**，代价是检索耗时 157ms → **1.73s/query**（p95 2.07s）。
+- 「完整作答」提示词（为修 adv-03 只答一步）把答案覆盖提到 87.0%，但回答变长，
+  外部 judge 由 72.3% 降到 58.7%（该语料的代码示例是 `{* docs_src/... *}` 占位符，
+  模型补写的代码在参考资料中无对应文本，会被 judge 判为无支撑）。
+- 同一批回答上本地 judge（1.5B，与生成同源）比外部 judge（DeepSeek）高约 **14pt**，
+  说明本地 judge 偏宽松；对外报数建议以外部 judge 为准（`--judge-model deepseek-chat`）。
+- 报告：`evaluation/answer_quality_report.md`（历史 408 语料版本已归档到 `evaluation/archive_408/`）
 
 ### 性能测试
 
@@ -131,7 +145,11 @@ python scripts\benchmark.py --skip-model  # 仅检索延迟（不占用模型）
 python scripts\benchmark.py --e2e 5       # 端到端采样 5 条
 ```
 
-- 报告：`evaluation/performance_report.md`（机器信息 / 检索 avg·p50·p95 / 模型内存 / 端到端耗时 / TTFT·吞吐）
+- 最新实测（含 bge-reranker-base 精排）：检索 avg **1732.6ms** / p95 **2065.5ms**（精排前为 157.0 / 171.9ms）；
+  模型加载 1.64s、卸载 0.05s、内存 1370MB → 67MB；多 Agent 端到端平均 12.46s（3 条采样）；
+  纯模型流式 TTFT 0.21~0.55s、吞吐 30.4~74.2 字/s。
+- 精排是主要新增开销：每 query 约 1.6s 用于 Cross-Encoder 打分（12 候选 × 256 token）。
+- 报告：`evaluation/performance_report.md`（机器信息 / 检索 avg·p50·p95 / 模型内存 / 端到端耗时 / TTFT·吞吐；历史 408 语料版本见 `evaluation/archive_408/`）
 - 注：`/api/agent/chat`（多 Agent 全链路）在链路跑完后**一次性推送整段回答**，
   因此只统计端到端总耗时与整体吞吐；真实的首帧延迟 TTFT 与生成吞吐由
   `/api/chat/stream`（逐批 token 流）测得。
@@ -153,7 +171,7 @@ docker compose up --build
 # 前端 http://localhost:5173  →  nginx 反代 /api 到 backend:8000（SSE 关闭缓冲）
 ```
 
-`models/` 与 `408-master/` 只读挂载，运行数据用命名卷 `kb_data` 持久化。
+`models/` 与 `datasets/` 只读挂载，运行数据用命名卷 `kb_data` 持久化。
 本地 `start.bat` 仍是主推启动方式，Docker 仅为可选加分项。
 
 ## 模型下载
@@ -177,12 +195,12 @@ huggingface-cli download onnx-community/bge-small-zh-v1.5-ONNX `
 
 1. 启动后端与前端
 2. 登录页注册一个账号（如 `demo` / `1234`）
-3. **知识库页**：查看已导入的 140 个文档（含 98 个数据结构课件 + 23 个计组第 2 章课件）及各自 chunk 数，可上传新文档
-4. **对话页**：提问「死锁产生的四个必要条件是什么？」
+3. **知识库页**：查看已导入的 123 个 FastAPI 文档及各自 chunk 数，可上传新文档
+4. **对话页**：提问「如何定义路径参数？」
    - 观察打字机流式输出
    - 右侧实时显示当前执行到哪个 Agent
    - 回答下方显示 4 条引用来源（文档名、页码、段落、相关度）
-5. 提问「画一个计算机网络七层模型」→ 回答下方渲染出 Mermaid 示意图
+5. 提问「画一个 FastAPI 请求处理流程图」→ 回答下方渲染出 Mermaid 示意图
 6. 提问「如何制造爆炸物？」→ 被审核 Agent 拦截，链路只走 3 个节点
 7. **Agent 链路页**：查看流程图，已执行节点按状态着色，未执行节点置灰，附耗时条形图
 8. **系统状态页**：查看模型加载状态、内存仪表盘、内存趋势、距离自动卸载的剩余秒数
@@ -191,7 +209,8 @@ huggingface-cli download onnx-community/bge-small-zh-v1.5-ONNX `
 
 ```
 <项目目录>/
-├── 408-master/              # 数据源：408 考研资料（四门学科，不入库，需自行补齐）
+├── datasets/fastapi-zh/     # 当前数据源：FastAPI 中文官方文档（MIT，已随仓库提供）
+├── 408-master/              # 备用数据源：408 考研资料（不入库，需自行补齐）
 ├── models/                  # 模型文件（已 gitignore，需自行下载）
 │   ├── qwen2.5-1.5b-instruct-q4_k_m.gguf
 │   └── bge-small-zh-v1.5-onnx/
@@ -210,7 +229,7 @@ huggingface-cli download onnx-community/bge-small-zh-v1.5-ONNX `
 │   │   ├── embedding/       # bge-small-zh ONNX（onnxruntime，无 PyTorch）
 │   │   ├── vector_store/    # Chroma 本地持久化
 │   │   ├── bm25_index/      # jieba + rank_bm25
-│   │   └── retriever/       # RRF 融合，Top10+Top10 → Top4
+│   │   └── retriever/       # RRF 融合，Top10+Top10 → Top6
 │   ├── llm_core/
 │   │   ├── model_manager/   # 子进程管理、空闲卸载、请求锁
 │   │   ├── model_worker/    # 独立进程加载 GGUF，HTTP 提供推理
@@ -294,7 +313,7 @@ huggingface-cli download onnx-community/bge-small-zh-v1.5-ONNX `
 | 大模型 | 本地：Qwen2.5-1.5B-Instruct GGUF Q4_K_M，llama-cpp-python，纯 CPU；可选 OpenAI 兼容远程 |
 | Embedding | bge-small-zh-v1.5 ONNX，onnxruntime CPUExecutionProvider |
 | 向量库 | Chroma 本地持久化 |
-| 检索 | BM25（jieba + rank_bm25）+ 向量 + RRF(k=60) |
+| 检索 | BM25（jieba + rank_bm25）+ 向量 + RRF(k=60) + bge-reranker-base Cross-Encoder 精排 |
 | 数据库 | SQLite + SQLAlchemy |
 | 审核 | DFA 敏感词 + 正则（不占用模型实例） |
 | 绘图 | 模型自绘 Mermaid + 退化图自检重试 + 关键词模板兜底 |
@@ -319,18 +338,16 @@ huggingface-cli download onnx-community/bge-small-zh-v1.5-ONNX `
 
 | 来源 | 形态 | 示例 |
 |---|---|---|
-| 笔记 `.md` | `kb_<相对 408-master 的路径>` | `kb_操作系统_第1章_计算机系统概述` |
+| 笔记 `.md` | `kb_<相对数据源的路径>` | `kb_tutorial_path-params` |
 | 课件 `.pdf` | `kb_<学科>_ppt_<章节>_<文件名>` | `kb_计算机组成原理_ppt_第2章_数据的表示和运算_2.1.1_进位计数制` |
 
 - 同一份源码 → 同一套 doc_id：`rebuild_all.py` 幂等，重复重建不会产生重复文档。
-- 当前库共 140 文档（19 笔记 + 121 课件），doc_id 中不含空格，且 Chroma / BM25 / SQLite 三端 doc_id 集合完全一致。
+- 当前库共 123 文档（全部 Markdown），doc_id 中不含空格，且 Chroma / BM25 / SQLite 三端 doc_id 集合完全一致。
 
 ## 已知限制
 
-- **计组第 2 章已补齐**：`第2章 数据的表示和运算.md` 是空文件（源仓库 README 已注明未整理），
-  已从同章 23 个课件 PDF 导入补齐，IEEE754 等查询 Top1 命中。
-- **数据结构靠课件补齐**：`408-master/数据结构/` 的章节笔记是手写扫描 PDF（提取 0 字符），
-  已放开 `数据结构/ppt/` 路径过滤，导入其中 98 个文字版课件 PDF（2745 chunks），该学科检索命中率 5/5。
+- **演示语料无扫描件**：`datasets/fastapi-zh/` 全为 Markdown（含代码块），无需课件补齐，
+  `config.yaml` 的 `rebuild.courseware` 默认为空；408 备用语料曾用课件补齐空笔记 / 扫描件，切回时需登记清单。
 - **绘图以模型自绘为主、稳定性有限**：优先让模型在回答中自绘 Mermaid；后端会做退化图自检
   （涉及节点 < 3 或所有边均为自环）并重试一次，仍不合格则丢弃自绘图、退回关键词模板兜底
   （模板仅覆盖死锁、中断、调度、OS 层次、网络七层等少量主题）。模型自绘的语法笔误由
@@ -338,6 +355,11 @@ huggingface-cli download onnx-community/bge-small-zh-v1.5-ONNX `
 - **答案质量指标为启发式**：忠实度用句级词面证据覆盖（阈值 0.6），引用正确率用来源关键词命中
   （已把引用正文纳入判定，并保留旧口径数值用于对比），均为轻量代理指标，
   适合版本间回归对比，不等价于严格语义蕴含（NLI）评判。
+- **演示语料的代码示例是占位符**：FastAPI 中文文档把代码块写成 `{* ../../docs_src/... *}`，
+  正文里没有真正的代码。模型讲解代码时只能按常识补全，会被 LLM judge 判为「无资料支撑」，
+  因此外部 judge 分数偏低（58.7%）主要由**语料缺代码**造成，不是检索或生成链路出错。
+- **1.5B 模型偶发重复生成**：温度 0.7 下个别回答会重复同一句（实测 tut-04 重复 30+ 次），
+  属于小模型解码稳定性问题，会同时拉低忠实度与 judge 分数。
 - **引用归因为词面启发式**（`backend/agent/citation.py`）：用句级词面覆盖判断来源是否被回答使用，
   会漏判「模型改写/概括」的情况，因此阈值偏宽松并保留兜底条数；不是严格引用判定。
 - **敏感词政治类为占位符**：`data/sensitive_words.txt` 分类 6 共 15 条是占位标签，需自行替换。
@@ -351,13 +373,13 @@ huggingface-cli download onnx-community/bge-small-zh-v1.5-ONNX `
 ## 协议
 
 - **代码**：MIT License，见 [LICENSE](./LICENSE)。
-- **演示语料**：`408-master/` 为第三方考研资料，版权归原作者所有，**不入库**，
-  仅用于本地演示与学习，请勿再分发。
+- **演示语料**：`datasets/fastapi-zh/` 取自 FastAPI 官方中文文档，遵循 MIT 许可。
+- **备用语料**：`408-master/` 为第三方考研资料，版权归原作者所有，**不入库**，仅用于本地演示与学习，请勿再分发。
 
 
 ## 换用其他语料（通用性）
 
-本系统的检索 / 问答 / 多 Agent 链路与语料无关，内置 408 考研资料仅作演示。换成其他资料：
+本系统的检索 / 问答 / 多 Agent 链路与语料无关，当前内置 FastAPI 中文文档作演示，408 资料保留为备用。换成其他资料：
 
 1. 把新资料放入项目内某目录，或修改 `backend/config/config.yaml` 的 `datasource.path` 指向它；
 2. 若新语料的课件需要额外补齐，编辑 `config.yaml` 的 `rebuild.courseware`

@@ -1,364 +1,507 @@
 [
   {
-    "id": "os-01",
-    "subject": "操作系统",
-    "query": "死锁产生的四个条件",
+    "id": "tut-01",
+    "subject": "入门教程",
+    "query": "如何定义路径参数",
     "keywords": [
-      "死锁"
+      "路径参数"
     ],
+    "expected_doc": "tutorial/path-params.md",
     "answer_keywords": [
-      "互斥",
-      "不可剥夺",
-      "请求",
-      "循环等待"
+      "路径参数",
+      "path"
     ]
   },
   {
-    "id": "os-02",
-    "subject": "操作系统",
-    "query": "页面置换算法有哪些",
+    "id": "tut-02",
+    "subject": "入门教程",
+    "query": "查询参数如何声明和校验",
     "keywords": [
-      "页面置换",
-      "置换算法",
-      "LRU",
-      "OPT"
+      "查询参数"
     ],
+    "expected_doc": "tutorial/query-params.md",
     "answer_keywords": [
-      "最佳置换",
-      "先进先出",
-      "LRU",
-      "时钟"
+      "查询参数",
+      "Query"
     ]
   },
   {
-    "id": "os-03",
-    "subject": "操作系统",
-    "query": "进程调度算法",
+    "id": "tut-03",
+    "subject": "入门教程",
+    "query": "请求体如何使用 Pydantic 模型",
     "keywords": [
-      "调度算法",
-      "进程调度",
-      "FCFS",
-      "时间片"
+      "请求体",
+      "BaseModel"
     ],
+    "expected_doc": "tutorial/body.md",
     "answer_keywords": [
-      "先来先服务",
-      "短作业优先",
-      "时间片轮转",
-      "优先级"
+      "请求体",
+      "BaseModel"
     ]
   },
   {
-    "id": "os-04",
-    "subject": "操作系统",
-    "query": "虚拟内存的基本概念",
+    "id": "tut-04",
+    "subject": "入门教程",
+    "query": "依赖注入 Depends 怎么用",
     "keywords": [
-      "虚拟内存",
-      "虚拟存储器"
+      "依赖注入",
+      "Depends"
     ],
+    "expected_doc": "tutorial/dependencies/index.md",
     "answer_keywords": [
-      "虚拟",
-      "内存",
-      "地址"
+      "依赖",
+      "Depends"
     ]
   },
   {
-    "id": "os-05",
-    "subject": "操作系统",
-    "query": "磁盘调度算法",
+    "id": "tut-05",
+    "subject": "入门教程",
+    "query": "带 yield 的依赖有什么作用",
     "keywords": [
-      "磁盘调度",
-      "寻道"
+      "yield",
+      "依赖"
     ],
+    "expected_doc": "tutorial/dependencies/dependencies-with-yield.md",
     "answer_keywords": [
-      "寻道",
-      "调度",
-      "SCAN",
-      "SSTF"
+      "yield",
+      "依赖"
     ]
   },
   {
-    "id": "os-06",
-    "subject": "操作系统",
-    "query": "进程和线程的区别",
+    "id": "tut-06",
+    "subject": "入门教程",
+    "query": "如何获取当前登录用户",
     "keywords": [
-      "进程",
-      "线程"
+      "当前用户",
+      "get_current_user"
     ],
+    "expected_doc": "tutorial/security/get-current-user.md",
     "answer_keywords": [
-      "进程",
-      "线程",
-      "资源",
-      "调度"
+      "当前用户",
+      "get_current_user"
     ]
   },
   {
-    "id": "ds-01",
-    "subject": "数据结构",
-    "query": "B+树和B树的区别",
+    "id": "tut-07",
+    "subject": "入门教程",
+    "query": "OAuth2 与 JWT 如何实现",
     "keywords": [
-      "B+树",
-      "B树",
-      "B-树"
+      "OAuth2",
+      "JWT"
     ],
+    "expected_doc": "tutorial/security/oauth2-jwt.md",
     "answer_keywords": [
-      "B+树",
-      "叶子",
-      "关键字"
+      "OAuth2",
+      "JWT"
     ]
   },
   {
-    "id": "ds-02",
-    "subject": "数据结构",
-    "query": "红黑树的定义和性质",
+    "id": "tut-08",
+    "subject": "入门教程",
+    "query": "如何添加 CORS 跨域中间件",
     "keywords": [
-      "红黑树"
+      "CORS",
+      "跨域"
     ],
+    "expected_doc": "tutorial/cors.md",
     "answer_keywords": [
-      "红黑树",
-      "结点",
-      "黑"
+      "CORS",
+      "跨域"
     ]
   },
   {
-    "id": "ds-03",
-    "subject": "数据结构",
-    "query": "堆排序的时间复杂度",
+    "id": "tut-09",
+    "subject": "入门教程",
+    "query": "后台任务 BackgroundTasks 怎么用",
     "keywords": [
-      "堆排序",
-      "堆"
+      "后台任务",
+      "BackgroundTasks"
     ],
+    "expected_doc": "tutorial/background-tasks.md",
     "answer_keywords": [
-      "堆",
-      "log",
-      "时间复杂度"
+      "后台任务",
+      "BackgroundTasks"
     ]
   },
   {
-    "id": "ds-04",
-    "subject": "数据结构",
-    "query": "KMP算法求next数组",
+    "id": "tut-10",
+    "subject": "入门教程",
+    "query": "如何上传文件 UploadFile",
     "keywords": [
-      "KMP",
-      "next数组"
+      "UploadFile",
+      "上传"
     ],
+    "expected_doc": "tutorial/request-files.md",
     "answer_keywords": [
-      "KMP",
-      "next",
-      "前缀",
-      "后缀"
+      "UploadFile",
+      "上传"
     ]
   },
   {
-    "id": "ds-05",
-    "subject": "数据结构",
-    "query": "图的邻接矩阵存储",
+    "id": "tut-11",
+    "subject": "入门教程",
+    "query": "表单数据怎么处理",
     "keywords": [
-      "邻接矩阵"
+      "表单",
+      "Form"
     ],
+    "expected_doc": "tutorial/request-forms.md",
     "answer_keywords": [
-      "邻接矩阵",
-      "顶点",
-      "边"
+      "表单",
+      "Form"
     ]
   },
   {
-    "id": "ds-06",
-    "subject": "数据结构",
-    "query": "二叉树的遍历方式",
+    "id": "tut-12",
+    "subject": "入门教程",
+    "query": "如何连接 SQL 数据库",
     "keywords": [
-      "遍历"
+      "SQLModel",
+      "SQLAlchemy"
     ],
+    "expected_doc": "tutorial/sql-databases.md",
     "answer_keywords": [
-      "先序",
-      "中序",
-      "后序",
-      "层次"
+      "SQLModel",
+      "SQLAlchemy"
     ]
   },
   {
-    "id": "ds-07",
-    "subject": "数据结构",
-    "query": "哈希表处理冲突的方法",
+    "id": "tut-13",
+    "subject": "入门教程",
+    "query": "如何挂载静态文件",
     "keywords": [
-      "哈希",
-      "散列",
-      "冲突"
+      "StaticFiles",
+      "静态文件"
     ],
+    "expected_doc": "tutorial/static-files.md",
     "answer_keywords": [
-      "开放地址",
-      "链地址",
-      "冲突"
+      "StaticFiles",
+      "静态文件"
     ]
   },
   {
-    "id": "net-01",
-    "subject": "计算机网络",
-    "query": "TCP三次握手过程",
+    "id": "tut-14",
+    "subject": "入门教程",
+    "query": "FastAPI 应用如何测试",
     "keywords": [
-      "三次握手",
-      "TCP连接",
-      "握手"
+      "TestClient",
+      "测试"
     ],
+    "expected_doc": "tutorial/testing.md",
     "answer_keywords": [
-      "SYN",
-      "ACK",
-      "握手"
+      "TestClient",
+      "测试"
     ]
   },
   {
-    "id": "net-02",
-    "subject": "计算机网络",
-    "query": "HTTP和HTTPS的区别",
+    "id": "tut-15",
+    "subject": "入门教程",
+    "query": "如何处理 HTTPException 异常",
     "keywords": [
-      "HTTPS",
-      "HTTP"
+      "HTTPException",
+      "异常"
     ],
+    "expected_doc": "tutorial/handling-errors.md",
     "answer_keywords": [
-      "HTTPS",
-      "加密",
-      "SSL"
+      "HTTPException",
+      "异常"
     ]
   },
   {
-    "id": "net-03",
-    "subject": "计算机网络",
-    "query": "拥塞控制和流量控制的区别",
+    "id": "tut-16",
+    "subject": "入门教程",
+    "query": "响应模型 response_model 的作用",
     "keywords": [
-      "拥塞控制",
-      "流量控制"
+      "response_model",
+      "响应模型"
     ],
+    "expected_doc": "tutorial/response-model.md",
     "answer_keywords": [
-      "拥塞控制",
-      "流量控制",
-      "窗口"
+      "response_model",
+      "响应模型"
     ]
   },
   {
-    "id": "net-04",
-    "subject": "计算机网络",
-    "query": "IP数据报分片",
+    "id": "tut-17",
+    "subject": "入门教程",
+    "query": "如何自定义响应状态码",
     "keywords": [
-      "分片",
-      "IP数据报",
-      "数据报"
+      "status_code",
+      "状态码"
     ],
+    "expected_doc": "tutorial/response-status-code.md",
     "answer_keywords": [
-      "分片",
-      "偏移",
-      "标识"
+      "status_code",
+      "状态码"
     ]
   },
   {
-    "id": "net-05",
-    "subject": "计算机网络",
-    "query": "滑动窗口协议",
+    "id": "tut-18",
+    "subject": "入门教程",
+    "query": "大型应用如何组织目录结构",
     "keywords": [
-      "滑动窗口",
-      "GBN",
-      "SR协议"
+      "APIRouter",
+      "目录"
     ],
+    "expected_doc": "tutorial/bigger-applications.md",
     "answer_keywords": [
-      "滑动窗口",
-      "窗口",
-      "确认"
+      "APIRouter",
+      "目录"
     ]
   },
   {
-    "id": "net-06",
-    "subject": "计算机网络",
-    "query": "ARP协议的作用",
+    "id": "tut-19",
+    "subject": "入门教程",
+    "query": "如何实现 Server-Sent Events",
     "keywords": [
-      "ARP"
+      "Server-Sent Events",
+      "SSE"
     ],
+    "expected_doc": "tutorial/server-sent-events.md",
     "answer_keywords": [
-      "ARP",
-      "IP",
-      "MAC",
-      "地址"
+      "Server-Sent Events",
+      "SSE"
     ]
   },
   {
-    "id": "co-01",
-    "subject": "计算机组成原理",
-    "query": "Cache的映射方式",
+    "id": "tut-20",
+    "subject": "入门教程",
+    "query": "如何返回流式响应",
     "keywords": [
-      "映射方式",
-      "Cache映射",
-      "直接映射",
-      "全相联"
+      "StreamingResponse",
+      "流式"
     ],
+    "expected_doc": "advanced/stream-data.md",
     "answer_keywords": [
-      "直接映射",
-      "全相联",
-      "组相联"
+      "StreamingResponse",
+      "流式"
     ]
   },
   {
-    "id": "co-02",
-    "subject": "计算机组成原理",
-    "query": "指令流水线的基本概念",
+    "id": "adv-01",
+    "subject": "进阶",
+    "query": "如何编写中间件",
     "keywords": [
-      "流水线"
+      "中间件",
+      "middleware"
     ],
+    "expected_doc": "advanced/middleware.md",
     "answer_keywords": [
-      "流水线",
-      "指令",
-      "重叠"
+      "中间件",
+      "middleware"
     ]
   },
   {
-    "id": "co-03",
-    "subject": "计算机组成原理",
-    "query": "IEEE754浮点数表示",
+    "id": "adv-02",
+    "subject": "进阶",
+    "query": "如何配置应用设置与环境变量",
     "keywords": [
-      "IEEE754",
-      "IEEE 754",
-      "浮点数"
+      "Settings",
+      "环境变量"
     ],
+    "expected_doc": "advanced/settings.md",
     "answer_keywords": [
-      "IEEE",
-      "符号",
-      "阶码",
-      "尾数"
+      "Settings",
+      "环境变量"
     ]
   },
   {
-    "id": "co-04",
-    "subject": "计算机组成原理",
-    "query": "中断的作用和原理",
+    "id": "adv-03",
+    "subject": "进阶",
+    "query": "如何使用 WebSocket",
     "keywords": [
-      "中断"
+      "WebSocket",
+      "连接"
     ],
+    "expected_doc": "advanced/websockets.md",
     "answer_keywords": [
-      "中断",
-      "程序",
-      "响应"
+      "WebSocket",
+      "连接",
+      "客户端"
     ]
   },
   {
-    "id": "co-05",
-    "subject": "计算机组成原理",
-    "query": "总线仲裁方式",
+    "id": "adv-04",
+    "subject": "进阶",
+    "query": "如何添加应用生命周期事件",
     "keywords": [
-      "总线"
+      "lifespan",
+      "事件"
     ],
+    "expected_doc": "advanced/events.md",
     "answer_keywords": [
-      "总线",
-      "仲裁",
-      "请求"
+      "lifespan",
+      "事件"
     ]
   },
   {
-    "id": "co-06",
-    "subject": "计算机组成原理",
-    "query": "定点数的补码表示",
+    "id": "adv-05",
+    "subject": "进阶",
+    "query": "如何使用 Jinja2 模板",
     "keywords": [
-      "补码"
+      "Jinja2",
+      "模板"
     ],
+    "expected_doc": "advanced/templates.md",
     "answer_keywords": [
-      "补码",
-      "符号",
-      "取反"
+      "Jinja2",
+      "模板"
+    ]
+  },
+  {
+    "id": "adv-06",
+    "subject": "进阶",
+    "query": "如何挂载子应用",
+    "keywords": [
+      "子应用",
+      "mount"
+    ],
+    "expected_doc": "advanced/sub-applications.md",
+    "answer_keywords": [
+      "子应用",
+      "mount"
+    ]
+  },
+  {
+    "id": "adv-07",
+    "subject": "进阶",
+    "query": "如何接入 OpenTelemetry 追踪",
+    "keywords": [
+      "OpenTelemetry",
+      "追踪"
+    ],
+    "expected_doc": "advanced/opentelemetry.md",
+    "answer_keywords": [
+      "OpenTelemetry",
+      "追踪"
+    ]
+  },
+  {
+    "id": "dep-01",
+    "subject": "部署",
+    "query": "如何用 Docker 部署 FastAPI",
+    "keywords": [
+      "Dockerfile",
+      "容器镜像"
+    ],
+    "expected_doc": "deployment/docker.md",
+    "answer_keywords": [
+      "Dockerfile",
+      "容器镜像"
+    ]
+  },
+  {
+    "id": "dep-02",
+    "subject": "部署",
+    "query": "HTTPS 证书与 TLS 终止代理如何配置",
+    "keywords": [
+      "HTTPS 证书",
+      "TLS",
+      "Let's Encrypt"
+    ],
+    "expected_doc": "deployment/https.md",
+    "answer_keywords": [
+      "HTTPS 证书",
+      "TLS",
+      "Let's Encrypt"
+    ]
+  },
+  {
+    "id": "dep-03",
+    "subject": "部署",
+    "query": "如何运行多个服务器工作进程",
+    "keywords": [
+      "--workers",
+      "工作进程"
+    ],
+    "expected_doc": "deployment/server-workers.md",
+    "answer_keywords": [
+      "--workers",
+      "工作进程"
+    ]
+  },
+  {
+    "id": "how-01",
+    "subject": "操作指南",
+    "query": "FastAPI 如何用 Strawberry 集成 GraphQL",
+    "keywords": [
+      "Strawberry",
+      "GraphQL"
+    ],
+    "expected_doc": "how-to/graphql.md",
+    "answer_keywords": [
+      "Strawberry",
+      "GraphQL"
+    ]
+  },
+  {
+    "id": "how-02",
+    "subject": "操作指南",
+    "query": "如何配置 Swagger UI",
+    "keywords": [
+      "Swagger UI",
+      "swagger_ui_parameters"
+    ],
+    "expected_doc": "how-to/configure-swagger-ui.md",
+    "answer_keywords": [
+      "Swagger UI",
+      "swagger_ui_parameters"
+    ]
+  },
+  {
+    "id": "how-03",
+    "subject": "操作指南",
+    "query": "如何从 Pydantic v1 迁移到 v2",
+    "keywords": [
+      "Pydantic v2",
+      "迁移"
+    ],
+    "expected_doc": "how-to/migrate-from-pydantic-v1-to-pydantic-v2.md",
+    "answer_keywords": [
+      "Pydantic v2",
+      "迁移"
+    ]
+  },
+  {
+    "id": "how-04",
+    "subject": "操作指南",
+    "query": "如何测试数据库依赖",
+    "keywords": [
+      "测试数据库",
+      "SQLModel"
+    ],
+    "expected_doc": "how-to/testing-database.md",
+    "answer_keywords": [
+      "测试数据库",
+      "SQLModel"
+    ]
+  },
+  {
+    "id": "root-01",
+    "subject": "入门教程",
+    "query": "如何通过环境变量配置 FastAPI",
+    "keywords": [
+      "环境变量",
+      "env var"
+    ],
+    "expected_doc": "environment-variables.md",
+    "answer_keywords": [
+      "环境变量",
+      "env var"
+    ]
+  },
+  {
+    "id": "root-02",
+    "subject": "入门教程",
+    "query": "async 和 await 在 FastAPI 中怎么用",
+    "keywords": [
+      "async",
+      "await"
+    ],
+    "expected_doc": "async.md",
+    "answer_keywords": [
+      "async",
+      "await"
     ]
   }
 ]

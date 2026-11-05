@@ -113,6 +113,7 @@ def main():
     from backend.rag.vector_store import ChromaStore
     from backend.rag.bm25_index import BM25Index
     from backend.rag.retriever import HybridRetriever
+    from backend.rag.reranker import build_reranker
 
     with open(args.queries_file, "r", encoding="utf-8") as f:
         queries = json.load(f)
@@ -121,7 +122,9 @@ def main():
     retriever = HybridRetriever(
         ChromaStore(persist_dir=cfg.get("chroma", {}).get("persist_directory")),
         BM25Index(persist_path=cfg.get("retrieval", {}).get("bm25_index_path")),
-        embedder)
+        embedder,
+        reranker=build_reranker(cfg.get("reranker", {})),
+        rerank_candidates=int(cfg.get("reranker", {}).get("max_candidates", 20) or 20))
     # 预热一次（排除首次编码开销）
     retriever.retrieve("预热", top_k=args.top_k)
     lat = []
@@ -194,7 +197,7 @@ def main():
     L.append(f"> 生成时间：{time.strftime('%Y-%m-%d %H:%M:%S')}")
     L.append(f"> 机器：CPU {cpu}　内存 {ram}　（纯 CPU 推理，无 GPU）\n")
 
-    L.append("## 1. 检索性能（HybridRetriever，TopK=4）\n")
+    L.append(f"## 1. 检索性能（HybridRetriever，TopK={args.top_k}，含 Cross-Encoder 精排）\n")
     L.append("| 指标 | 数值 |")
     L.append("|---|---|")
     L.append(f"| 样本数 | {rp['n']} |")

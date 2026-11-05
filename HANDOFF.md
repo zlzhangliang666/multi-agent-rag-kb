@@ -20,11 +20,11 @@
 - 路径：`E:\thesis`
 - 定位：**通用「知识库问答系统」**（RAG + 多 Agent，本地化部署）。
   用户上传 PDF / Word / TXT / Markdown → 解析 → 自适应分块 → 向量化 → 建索引 → 检索问答。
-- **408 考研资料只是内置演示语料**，换成其他语料只需改配置（见第 5 节）。
+- **演示语料：FastAPI 中文官方文档**（`datasets/fastapi-zh/`，123 个 `.md`，MIT）；`408-master/` 保留为备用语料。换成其他语料只需改配置（见第 5 节）。
 - 技术栈：
   - 前端：Vue3 + Vite + Element Plus（对话 / 知识库 / Agent 链路 / 系统状态 / 数据大屏 / 模型设置 / 登录）
   - 后端：FastAPI + SQLAlchemy + SQLite
-  - 检索：Chroma 向量库 + BM25 关键词，RRF 混合召回
+  - 检索：Chroma 向量库 + BM25 关键词，RRF 混合召回，bge-reranker-base ONNX 精排
   - 向量化：bge-small-zh-v1.5 ONNX（本地）
   - 生成：本地 Qwen2.5-1.5B-Instruct GGUF（子进程 + 空闲 180s 卸载）；可选 OpenAI 兼容远程模型（前端「模型设置」页配 Key，未配则默认本地）
   - 编排：LangGraph 五 Agent（调度 / 审核 / 检索 / 生成 / 绘图）
@@ -39,29 +39,35 @@
 - 健康检查：`GET http://127.0.0.1:8000/api/health`。
 
 ## 3. 已完成（按时间倒序）
-1. **前端可配置远程模型（最新一轮，2026-10-14）** —— 详见 `STATUS.md` 第二十节：
+1. **数据集切换为 FastAPI 中文文档（2026-10-26）** —— 详见 `STATUS.md` 第二十三节：
+   - 新增 `datasets/fastapi-zh/`（123 个 `.md`，取自 fastapi 官方中文文档，MIT）；
+   - `config.yaml` → `datasource.path = datasets/fastapi-zh`、`rebuild.courseware = []`；
+   - `evaluation/queries.json` 重写为 **36 条**（tutorial / advanced / deployment / how-to）；
+   - 重建结果 **123 文档 / 1777 chunks**，Hit@4 **100%（36/36）**、MRR **0.8843**、平均 191.7ms；
+   - 旧 408 评测报告归档到 `evaluation/archive_408/`。
+2. **前端可配置远程模型（2026-10-14）** —— 详见 `STATUS.md` 第二十节：
    - 新增 `backend/llm_core/providers/`（local / openai 兼容 provider + `LLMService` + 配置存储与脱敏）；
    - `LLMService` 与 `ModelManager` 同签名，`main.py` 与 `/api/chat/stream` 零改动替换；
    - 新增接口 `GET/PUT /api/llm/config`、`POST /api/llm/test`；`/api/model/status` 增加 `active_provider`/`remote`；
    - 未配置 Key → 默认本地；切远程 → 自动卸载本地权重；远程失败默认报错，可选自动回退本地；
    - 新增「模型设置」页 `frontend/src/views/ModelSettingsView.vue`（第 7 页）+ API 封装 + 路由/菜单；
    - 新增 `test/test_provider.py`（18 项），pytest 合计 **43 项通过**。
-2. **阶段 6 可选加分项 + 评测补齐（2026-10-14）** —— 详见 `STATUS.md` 第十九节：
+3. **阶段 6 可选加分项 + 评测补齐（2026-10-14）** —— 详见 `STATUS.md` 第十九节：
    - 评测集通用化并扩到 **25 条**（`evaluation/queries.json` 新增 `answer_keywords` 字段）；
    - 新增答案质量评测 `scripts/evaluate_answer_quality.py`（引用正确率 / 覆盖率 / 忠实度 / 答案覆盖度，走真实 SSE 链路）；
    - 新增性能测试 `scripts/benchmark.py`（检索延迟 / 模型加载·卸载内存 / 端到端 TTFT·吞吐）；
    - 新增 pytest 单元测试 **25 项**（`test/` + `pytest.ini`）；
    - 新增数据大屏页 `frontend/src/views/DataDashboardView.vue` + 接口 `GET /api/stats/overview`；
    - 新增可选容器化部署（`Dockerfile` / `Dockerfile.frontend` / `docker-compose.yml` / `frontend/nginx.conf`）。
-3. **通用化改造 + 健壮性修复** —— 详见 `STATUS.md` 第十八节：
+4. **通用化改造 + 健壮性修复** —— 详见 `STATUS.md` 第十八节：
    - `rebuild_all.py` 课件清单改为从 `config.yaml` 的 `rebuild.courseware` 读取（去硬编码）；
    - 提示词与服务名去 408 绑定（worker / llm_gen / main）；
    - 上传：强制 50MB 上限（413）、落库失败回滚检索侧并返回 500、空文本提示需 OCR；
    - 评测集外置到 `evaluation/queries.json`，脚本支持 `--queries-file`。
-4. **前端删除历史对话**：`DELETE /api/chat/conversations/{id}`（级联删消息 / 日志 / 绘图记录）+ 会话列表删除按钮（二次确认）。
-5. **doc_id 统一 + 原地重建**：`backend/rag/doc_id.py` 为唯一权威实现；重建后 140 文档 / 4183 chunks。
-6. **运行时数据根统一 + 可复现**：数据统一到项目内 `data/`，`scripts/rebuild_all.py` 幂等重建，`start.bat` 一键启动。
-7. **新会话首问 HTTP 422 修复**：`conversation_id: Optional[str]`（Pydantic v2 显式 null 校验问题），覆盖 chat 与 agent_log 两个接口。
+5. **前端删除历史对话**：`DELETE /api/chat/conversations/{id}`（级联删消息 / 日志 / 绘图记录）+ 会话列表删除按钮（二次确认）。
+6. **doc_id 统一 + 原地重建**：`backend/rag/doc_id.py` 为唯一权威实现；重建后 140 文档 / 4183 chunks。
+7. **运行时数据根统一 + 可复现**：数据统一到项目内 `data/`，`scripts/rebuild_all.py` 幂等重建，`start.bat` 一键启动。
+8. **新会话首问 HTTP 422 修复**：`conversation_id: Optional[str]`（Pydantic v2 显式 null 校验问题），覆盖 chat 与 agent_log 两个接口。
 
 ## 4. 改动关键文件
 - 配置：`backend/config/config.yaml`（含 `datasource` 与 `rebuild.courseware`）、`backend/config/__init__.py`
@@ -109,7 +115,7 @@
 cd E:\thesis
 # 重建预览（不写库）
 .\.venv\Scripts\python.exe scripts\rebuild_all.py
-# 检索评测（外部评测集，25 条）
+# 检索评测（外部评测集，36 条）
 .\.venv\Scripts\python.exe scripts\evaluate_retrieval.py
 # 答案质量评测（需后端运行）
 .\.venv\Scripts\python.exe scripts\evaluate_answer_quality.py
@@ -124,10 +130,11 @@ curl http://127.0.0.1:8000/api/llm/config
 ```
 
 ## 8. 当前数据快照
-- 文档：**140**（19 笔记 + 121 课件）；chunks：**4183**（Chroma = BM25 = SQLite）
-- 检索：Hit@4 **100%（25/25）**，MRR **0.9300**；平均延迟 ~139ms（p50 138 / p95 149）
-- 答案质量：引用正确率 **90.3%**（旧口径 71.3%）、引用覆盖率 **100.0%**、忠实度 **74.0%**、答案覆盖度 **72.0%**（25 条）
-- 性能：模型加载 2.34s / 卸载 0.28s / 内存 1368MB → 65MB（降 1304MB）；生成 TTFT ~0.30s、吞吐 ~28 字/s
+- 文档：**123**（FastAPI 中文文档，全部 `.md`）；chunks：**1777**（Chroma = BM25 = SQLite）
+- 检索（已开精排）：Hit@4 **97.2%（35/36）**，MRR **0.9537**；评测平均 1759.2ms，benchmark 检索 avg 1732.6ms / p95 2065.5ms（精排前 157.0 / 171.9ms）
+- 答案质量（36 条，0 失败，TopK 5 / ratio 0.5 / 精排 / 完整作答提示词）：引用正确率 **89.3%**（旧口径 59.6%）、覆盖率 **97.2%**、词面忠实 **78.8%**、本地 judge **81.0%**、外部 DeepSeek judge **58.7%**、覆盖度 **87.0%**
+- 性能：模型加载 1.64s / 卸载 0.05s / 内存 1370MB → 67MB；多 Agent 端到端均 12.46s（3 条采样）；纯模型流式 TTFT 0.21~0.55s、吞吐 30.4~74.2 字/s
+- 评测脚本支持外部 judge：`python scripts/evaluate_answer_quality.py --judge-model deepseek-chat`（生成链路不变）
 - 单元测试：pytest **71 项通过**
 - 聊天历史：conversations 14 / messages 78；agent_logs 225；images 3
 - LLM 配置：`llm_settings` 单行，默认 `provider=local`、无 API Key（远程需在「模型设置」页自行配置）

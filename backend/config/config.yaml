@@ -40,16 +40,24 @@ chroma:
 
 # ---- 检索配置 ----
 retrieval:
-  top_k: 4
+  top_k: 5
   bm25_weight: 0.5
   vector_weight: 0.5
   # 相对分数阈值：RRF 融合分数低于 (top1 分数 × 该比例) 的来源会被丢弃，
   # 避免明显跑题的片段也被当作「引用来源」展示（precision 上升、coverage 可能下降）
-  min_score_ratio: 0.45
+  min_score_ratio: 0.5
   # 至少保留的来源条数（防止阈值过滤后引用为空）
   min_sources: 2
   # BM25 索引持久化路径（upload/delete 会重写该索引）
   bm25_index_path: "${KB_DATA_DIR:-data}/bm25_index.pkl"
+
+# ---- 精排（Cross-Encoder）----
+reranker:
+  enabled: true
+  model_dir: "models/bge-reranker-base-onnx"
+  max_candidates: 12
+  max_length: 256
+  batch_size: 8
 
 # ---- 数据库 ----
 database:
@@ -95,32 +103,29 @@ audit:
   # DFA 敏感词文件路径
   sensitive_words_file: "data/sensitive_words.txt"
 
-# ---- 数据源目录（语料根目录；当前内置 408 考研资料作为演示） ----
+# ---- 数据源目录（语料根目录；默认使用 FastAPI 中文官方文档作为演示语料） ----
 datasource:
   # 语料根目录（相对项目根目录）。换语料时改这一行即可，无需改代码。
-  path: "408-master"
-  # 支持的学科列表
+  path: "datasets/fastapi-zh"
+  # 分类列表（仅用于文档说明/统计展示；代码不依赖此字段）
   subjects:
-    - name: "操作系统"
-      dir: "操作系统"
-      description: "王道操作系统笔记与PPT"
-    - name: "数据结构"
-      dir: "数据结构"
-      description: "王道数据结构笔记与PPT"
-    - name: "计算机组成原理"
-      dir: "计算机组成原理"
-      description: "王道计组笔记与PPT"
-    - name: "计算机网络"
-      dir: "计算机网络"
-      description: "王道&湖科大计网笔记与PPT"
+    - name: "入门教程"
+      dir: "tutorial"
+      description: "FastAPI 教程：路径/查询参数、请求体、依赖、安全"
+    - name: "进阶"
+      dir: "advanced"
+      description: "进阶：中间件、流式响应、事件、OpenAPI 扩展"
+    - name: "部署"
+      dir: "deployment"
+      description: "部署：Docker、HTTPS、服务器进程"
+    - name: "操作指南"
+      dir: "how-to"
+      description: "How-to：GraphQL、测试数据库、OpenAPI 定制"
 
 # ---- 知识库重建 ----
 # 换语料时：改上面的 datasource.path 指向新语料；按需调整下方 courseware 清单。
 # 说明：.md 笔记由 init_knowledge_base.py 全量扫描导入，无需在此登记；
 #       courseware 仅登记「需要用课件 PDF 额外补齐」的目录（path 相对 datasource.path，支持通配符）。
 rebuild:
-  courseware:
-    - subject: "数据结构"
-      path: "数据结构/ppt/*"
-    - subject: "计算机组成原理"
-      path: "计算机组成原理/ppt/第2章 数据的表示和运算"
+  # 当前语料为纯 Markdown，无需课件 PDF 补齐
+  courseware: []
